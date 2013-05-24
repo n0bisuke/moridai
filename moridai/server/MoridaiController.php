@@ -5,20 +5,20 @@
  * CakePHP v2.3.5
  */
 class MoridaiController extends AppController {
-  public $name = 'Moridai'; //class name
+	public $name = 'Moridai'; //class name
 	public $uses = array('MoridaiUser','MoridaiQuestion','MoridaiHistory','MoridaiCategory');
 	var $components = array('RequestHandler');
 	public $layout = null;
 	
 	//UseraddAPI(ユーザ追加) POST
 	function useradd(){
-		if($this->params['form']['user_name'] != null &&
-			$this->params['form']['facebook_id'] != null){//empty checking(not null post)
+		if($this->request->data['user_name'] != null &&
+			$this->request->data['facebook_id'] != null){//empty checking(not null post)
 			
-			$this->data['MoridaiUser']['user_name'] = $this->params['form']['user_name']; //userID
-			$this->data['MoridaiUser']['facebook_id'] = $this->params['form']['facebook_id']; //facebookID
+			$this->request->data['MoridaiUser']['user_name'] = $this->request->data['user_name']; //userID
+			$this->request->data['MoridaiUser']['facebook_id'] = $this->request->data['facebook_id']; //facebookID
 			
-			if ($this->MoridaiUser->save($this->data)){
+			if ($this->MoridaiUser->save($this->request->data)){
             	$output['response'] = 'Saved';
         	} else {
             	$output['response'] = 'Error';
@@ -31,21 +31,21 @@ class MoridaiController extends AppController {
 	
 	//AnswerCheckAPI (正誤情報をサーバーへ連絡) POST
 	function answer_check(){
-		if($this->params['form']['user_id'] != null &&
-			$this->params['form']['question_id'] != null &&
-			$this->params['form']['category_id'] != null &&
-			$this->params['form']['answer_flag'] != null &&
-			$this->params['form']['answer_option'] != null &&
-			$this->params['form']['answer_type'] != null){//empty checking(not null post)
+		if($this->request->data['user_id'] != null &&
+			$this->request->data['question_id'] != null &&
+			$this->request->data['category_id'] != null &&
+			$this->request->data['answer_flag'] != null &&
+			$this->request->data['answer_option'] != null &&
+			$this->request->data['answer_type'] != null){//empty checking(not null post)
 			
-			$this->data['MoridaiHistory']['user_id'] = $this->params['form']['user_id'];
-			$this->data['MoridaiHistory']['question_id'] = $this->params['form']['question_id'];
-			$this->data['MoridaiHistory']['category_id'] = $this->params['form']['category_id'];
-			$this->data['MoridaiHistory']['answer_flag'] = $this->params['form']['answer_flag'];
-			$this->data['MoridaiHistory']['answer_option'] = $this->params['form']['answer_option'];
-			$this->data['MoridaiHistory']['answer_type'] = $this->params['form']['answer_type'];
+			$this->request->data['MoridaiHistory']['user_id'] = $this->request->data['user_id'];
+			$this->request->data['MoridaiHistory']['question_id'] = $this->request->data['question_id'];
+			$this->request->data['MoridaiHistory']['category_id'] = $this->request->data['category_id'];
+			$this->request->data['MoridaiHistory']['answer_flag'] = $this->request->data['answer_flag'];
+			$this->request->data['MoridaiHistory']['answer_option'] = $this->request->data['answer_option'];
+			$this->request->data['MoridaiHistory']['answer_type'] = $this->request->data['answer_type'];
 			
-			if ($this->MoridaiHistory->save($this->data)){
+			if ($this->MoridaiHistory->save($this->request->data)){
             	$output['response'] = 'Saved';
         	} else {
             	$output['response'] = 'Error';
@@ -59,13 +59,13 @@ class MoridaiController extends AppController {
 
 	//QuestionAPI (出題) GET
     function question(){
-    	if($this->params['url']['user_id'] != null &&
-			$this->params['url']['category_id'] != null){
+    	if($this->request->query['user_id'] != null &&
+			$this->request->query['category_id'] != null){
 			
     		//指定カテゴリ内で正解した問題検索 ※1
 			$data = $this->MoridaiHistory->find('all', array(
 				'conditions' => 
-				array('MoridaiHistory.user_id' => $this->params['url']['user_id'], //指定ユーザ$user_idが回答した問題
+				array('MoridaiHistory.user_id' => $this->request->query['user_id'], //指定ユーザ$user_idが回答した問題
 					'MoridaiHistory.answer_flag' => 1 //なおかつ正解した問題					
 					),
 				'fields' => Array('MoridaiHistory.question_id')//フィールド指定
@@ -74,7 +74,7 @@ class MoridaiController extends AppController {
 			if(!empty($data)){
 				//カテゴリ内の全問題
 				$alldata = $this->MoridaiQuestion->find('all',array('conditions' =>
-					 array('MoridaiQuestion.category_id' => $this->params['url']['category_id'])));
+					 array('MoridaiQuestion.category_id' => $this->request->query['category_id'])));
 				$allcount = count($alldata); //カテゴリ内の全問題数
 				$quizcount = count($data); //正解した問題数
 				if($quizcount==$allcount){//全ての問題に回答済
@@ -85,7 +85,7 @@ class MoridaiController extends AppController {
 					foreach ($data as $key => $value) {
 						if($key == 0){
 							$sql .= " `id` !=".$value['MoridaiHistory']['question_id'];
-							$sql .= " AND `category_id` =".$this->params['url']['category_id'];
+							$sql .= " AND `category_id` =".$this->request->query['category_id'];
 						}else{
 							$sql .= " AND  `id` !=".$value['MoridaiHistory']['question_id'];
 						}
@@ -106,7 +106,7 @@ class MoridaiController extends AppController {
 				}
 			}else{//初回答の場合はDBからランダムに1件指定したカテゴリの問題を取得
         		$output['response'] = $this->MoridaiQuestion->find('all',array('conditions' =>
-					 array('MoridaiQuestion.category_id' => $this->params['url']['category_id']),
+					 array('MoridaiQuestion.category_id' => $this->request->query['category_id']),
 					 'limit' => 1,'order' => 'rand()'));
         	}
         }else{//null post
@@ -135,4 +135,3 @@ class MoridaiController extends AppController {
 	}
 }
 ?>
-
